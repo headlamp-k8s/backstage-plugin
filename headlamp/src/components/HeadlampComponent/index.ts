@@ -1,0 +1,1 @@
+export { HeadlampComponent } from './HeadlampComponent';
