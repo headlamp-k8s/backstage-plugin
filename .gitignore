@@ -1,1 +1,6 @@
 .DS_Store
+
+packages/backstage-plugin-headlamp-app-darwin-arm64/bin/
+packages/backstage-plugin-headlamp-app-linux-x64-gnu/bin/
+packages/backstage-plugin-headlamp-app-win32-x64-msvc/bin/
+headlamp-backend/headlamp-repo/

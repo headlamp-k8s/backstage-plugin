@@ -32,7 +32,11 @@
     "prepack": "backstage-cli package prepack",
     "postpack": "backstage-cli package postpack",
     "start": "backstage-cli package start",
-    "test": "backstage-cli package test"
+    "test": "backstage-cli package test",
+    "postinstall": "node postinstall.js",
+    "build-headlamps": "node build-headlamps.js",
+    "update-package-json-testing": "node update-package-json-testing.js",
+    "update-package-json-non-testing": "node update-package-json-non-testing.js"
   },
   "dependencies": {
     "@backstage/backend-defaults": "^0.4.2",
@@ -63,6 +67,11 @@
     "@types/supertest": "^2.0.8",
     "msw": "^2.0.8",
     "supertest": "^6.2.4"
+  },
+  "optionalDependencies": {
+    "@headlamp-k8s/backstage-plugin-headlamp-app-darwin-arm64": "0.1.0",
+    "@headlamp-k8s/backstage-plugin-headlamp-app-linux-x64-gnu": "0.1.0",
+    "@headlamp-k8s/backstage-plugin-headlamp-app-win32-x64-msvc": "0.1.0"
   },
   "configSchema": "config.d.ts"
 }

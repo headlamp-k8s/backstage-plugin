@@ -1,0 +1,11 @@
+{
+  "name": "@headlamp-k8s/backstage-plugin-headlamp-app-win32-x64-msvc",
+  "version": "0.1.0",
+  "description": "Headlamp server binary for Backstage plugin (win32-x64-msvc)",
+  "main": "bin/headlamp-server.exe",
+  "bin": {
+    "headlamp-server": "./bin/headlamp-server.exe"
+  },
+  "author": "Headlamp devs",
+  "license": "Apache-2.0"
+}

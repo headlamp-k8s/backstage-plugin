@@ -1,0 +1,12 @@
+{
+    "name": "@headlamp-k8s/backstage-plugin-headlamp-app-darwin-arm64",
+    "version": "0.1.0",
+    "description": "Headlamp server binary for Backstage plugin (darwin-arm64)",
+    "main": "bin/headlamp-server",
+    "bin": {
+      "headlamp-server": "./bin/headlamp-server"
+    },
+    "author": "Headlamp devs",
+    "license": "Apache-2.0"
+  }
+  

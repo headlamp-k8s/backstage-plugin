@@ -1,0 +1,12 @@
+{
+    "name": "@headlamp-k8s/backstage-plugin-headlamp-app-linux-x64-gnu",
+    "version": "0.1.0",
+    "description": "Headlamp server binary for Backstage plugin (linux-x64-gnu)",
+    "main": "bin/headlamp-server",
+    "bin": {
+      "headlamp-server": "./bin/headlamp-server"
+    },
+    "author": "Headlamp devs",
+    "license": "Apache-2.0"
+  }
+  
