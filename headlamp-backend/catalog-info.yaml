@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: headlamp-k8s-backstage-plugin-headlamp-backend
+  title: "@headlamp-k8s/backstage-plugin-headlamp-backend"
+spec:
+  lifecycle: experimental
+  type: backstage-backend-plugin
+  owner: maintainers
