@@ -1,0 +1,16 @@
+{
+  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "target": "ES2020",
+    "module": "CommonJS",
+    "skipLibCheck": true,
+    "lib": [
+      "ES2020"
+    ]
+  }
+}
