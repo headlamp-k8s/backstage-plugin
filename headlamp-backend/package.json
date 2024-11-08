@@ -33,10 +33,11 @@
     "postpack": "backstage-cli package postpack",
     "start": "backstage-cli package start",
     "test": "backstage-cli package test",
-    "postinstall": "node postinstall.js",
+    "postinstall": "node postinstall.js && node pluginDownload.js",
     "build-headlamps": "node build-headlamps.js",
     "update-package-json-testing": "node update-package-json-testing.js",
-    "update-package-json-non-testing": "node update-package-json-non-testing.js"
+    "update-package-json-non-testing": "node update-package-json-non-testing.js",
+    "plugin-download": "node pluginDownload.js"
   },
   "dependencies": {
     "@backstage/backend-defaults": "^0.4.2",
