@@ -23,6 +23,7 @@
   "types": "src/index.ts",
   "files": [
     "dist",
+    "postinstall.js",
     "config.d.ts"
   ],
   "scripts": {
@@ -32,7 +33,7 @@
     "prepack": "backstage-cli package prepack",
     "postpack": "backstage-cli package postpack",
     "start": "backstage-cli package start",
-    "test": "backstage-cli package test"
+    "postinstall": "node postinstall.js"
   },
   "dependencies": {
     "@backstage/backend-defaults": "^0.4.2",
