@@ -27,7 +27,7 @@
     "config.d.ts"
   ],
   "scripts": {
-    "build": "backstage-cli package build",
+    "build": "yarn tsc --declaration --declarationDir dist-types/src --outDir dist-types/src && backstage-cli package build",
     "clean": "backstage-cli package clean",
     "lint": "backstage-cli package lint",
     "prepack": "backstage-cli package prepack",
