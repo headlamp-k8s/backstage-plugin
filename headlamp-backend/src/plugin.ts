@@ -34,8 +34,8 @@ export const headlampPlugin = createBackendPlugin({
         
         
         const kubeconfigPath = path.join(os.tmpdir(), 'kubeconfig.yaml');
-        const headlampBinaryPath = config.getString('headlampBackend.binaryPath') || path.join(process.cwd(), 'bin', process.platform === 'win32' ? 'headlamp-standalone.exe' : 'headlamp-standalone');
-        const pluginsPath = config.getString('headlampBackend.pluginsPath') || path.join(process.cwd(), 'plugins');
+        const headlampBinaryPath = config.getOptionalString('headlampBackend.binaryPath') || path.join(process.cwd(), 'bin', process.platform === 'win32' ? 'headlamp-standalone.exe' : 'headlamp-standalone');
+        const pluginsPath = config.getOptionalString('headlampBackend.pluginsPath') || path.join(process.cwd(), 'plugins');
 
         logger.info(`Headlamp Binary Path: ${headlampBinaryPath}`);
         logger.info(`Kubeconfig Path: ${kubeconfigPath}`);
