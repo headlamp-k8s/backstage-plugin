@@ -102,8 +102,12 @@ async function spawnHeadlamp(
   kubeconfigPath: string,
   pluginsPath: string
 ) {
-  const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials);
-  fs.writeFileSync(kubeconfigPath, kubeconfig);
+  try {
+    const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials);
+    fs.writeFileSync(kubeconfigPath, kubeconfig);
+  } catch (error) {
+    logger.error(`Error creating kubeconfig from kubernetes config: ${error}`);
+  }
   const headlampProcess = spawn(headlampBinaryPath, [
     "--kubeconfig",
     kubeconfigPath,
