@@ -1,8 +1,8 @@
 import { createApiRef } from '@backstage/core-plugin-api';
 
 export interface HeadlampApi {
-  startServer(): Promise<void>;
-  refreshKubeconfig(): Promise<void>;
+  startServer(auth: {[key: string]: string}): Promise<void>;
+  refreshKubeconfig(auth: {[key: string]: string}): Promise<void>;
   health(): Promise<{ status: string }>;
 }
 

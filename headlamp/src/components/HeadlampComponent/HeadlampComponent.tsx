@@ -3,6 +3,8 @@ import { Progress } from '@backstage/core-components';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { configApiRef, useApi } from '@backstage/core-plugin-api';
 import { headlampApiRef } from '../../api/types';
+import { kubernetesApiRef,kubernetesAuthProvidersApiRef } from '@backstage/plugin-kubernetes-react';
+
 
 /**
  * HeadlampMessage is the type for messages received from headlamp iframe.
@@ -23,6 +25,27 @@ export function HeadlampComponent() {
   const refreshInterval = 5000;
   const [isStandalone, setIsStandalone] = useState(true);
 
+  const kubernetesApi = useApi(kubernetesApiRef);
+  const kubernetesAuthProvidersApi = useApi(kubernetesAuthProvidersApiRef);
+
+
+  const fetchAuthTokenMap = async () => {
+    const clusters = await kubernetesApi.getClusters();
+    const clusterNames: string[] = []
+    clusters.forEach(c=>{
+      clusterNames.push(
+        `${c.authProvider}${
+          c.oidcTokenProvider ? `.${c.oidcTokenProvider}` : ''
+        }`)
+    })
+
+    const authTokenMap: {[key: string]: string} = {}
+    for (const clusterName of clusterNames) {
+      const auth = await kubernetesAuthProvidersApi.getCredentials(clusterName);
+      authTokenMap[clusterName] = auth.token;
+    }
+    return authTokenMap;
+  }
 
   // Check if Headlamp is running standalone or not
   // if not, start the server
@@ -33,7 +56,10 @@ export function HeadlampComponent() {
       setIsStandalone(standalone);
       
       if (!standalone) {
-        headlampApi.startServer();
+        const authTokenMap = await fetchAuthTokenMap();
+
+        console.log('Starting Headlamp server');
+        headlampApi.startServer(authTokenMap);
       }
     };
 
@@ -97,6 +123,27 @@ export function HeadlampComponent() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [handleMessage]);
+
+  // Add periodic refresh of kubeconfig
+  useEffect(() => {
+    if (!isStandalone) {
+      const refreshKubeconfigPeriodically = async () => {
+        const authTokenMap = await fetchAuthTokenMap();
+        console.log('Refreshing kubeconfig');
+        await headlampApi.refreshKubeconfig(authTokenMap);
+      };
+
+      // Initial refresh
+      refreshKubeconfigPeriodically();
+
+      // Set up interval for periodic refresh (every minute)
+      const intervalId = setInterval(refreshKubeconfigPeriodically, 60000);
+
+      // Cleanup interval on component unmount
+      return () => clearInterval(intervalId);
+    }
+    return undefined;
+  }, [isStandalone, headlampApi]);
 
   if (!isLoaded) {
     return <Progress />;
