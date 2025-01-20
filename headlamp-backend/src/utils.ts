@@ -2,6 +2,7 @@ import fs from 'fs';
 import { BackstageCredentials } from '@backstage/backend-plugin-api';
 import { HeadlampKubernetesBuilder } from './headlamp';
 import yaml from 'js-yaml';
+import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
 
 /**
  * Represents a cluster configuration in a kubeconfig file
@@ -127,8 +128,9 @@ export async function writeKubeconfig(
     credentials: BackstageCredentials,
     kubernetesBuilder: HeadlampKubernetesBuilder,
     filePath: string,
+    auth: KubernetesRequestAuth
   ) {
-    const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials);
+    const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
   
     fs.writeFileSync(filePath, kubeconfig);
   }

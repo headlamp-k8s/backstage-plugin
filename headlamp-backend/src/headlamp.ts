@@ -23,7 +23,7 @@ export class HeadlampKubernetesBuilder extends KubernetesBuilder {
    * @returns {Promise<Array<{name: string, url: string, skipTLSVerify: boolean, credential: KubernetesCredential, caData: string}>>} 
    * Array of cluster details including connection info and credentials
    */
-  public async listClusterDetails(credentials: BackstageCredentials): Promise<
+  public async listClusterDetails(credentials: BackstageCredentials,auth: KubernetesRequestAuth): Promise<
     Array<{
       name: string;
       url: string;
@@ -44,20 +44,14 @@ export class HeadlampKubernetesBuilder extends KubernetesBuilder {
       const oidcTokenProvider =
         cd.authMetadata[ANNOTATION_KUBERNETES_OIDC_TOKEN_PROVIDER];
       const authProvider = cd.authMetadata[ANNOTATION_KUBERNETES_AUTH_PROVIDER];
-      const strategy = this.getAuthStrategyMap()[authProvider];
-      let auth: AuthMetadata = {};
-      if (strategy) {
-        auth = strategy.presentAuthMetadata(cd.authMetadata);
-      }
 
       const authStrategyMap = this.getAuthStrategyMap();
-      const emptyAuth: KubernetesRequestAuth = {};
 
       const currentAuthStrategy = authStrategyMap[authProvider];
 
       const currentCredential = await currentAuthStrategy.getCredential(
         cd,
-        emptyAuth,
+        auth,
       );
 
       return {
@@ -159,8 +153,8 @@ export class HeadlampKubernetesBuilder extends KubernetesBuilder {
    * @param {BackstageCredentials} credentials - The Backstage credentials for authentication
    * @returns {Promise<string>} Combined kubeconfig file contents as a string
    */
-  public async getKubeconfig(credentials: BackstageCredentials): Promise<string> {
-    const clusters = await this.listClusterDetails(credentials);
+  public async getKubeconfig(credentials: BackstageCredentials,auth: KubernetesRequestAuth): Promise<string> {
+    const clusters = await this.listClusterDetails(credentials,auth);
 
     const kubeconfigs = clusters.map(cluster =>
       this.convertClusterToKubeconfig(cluster),

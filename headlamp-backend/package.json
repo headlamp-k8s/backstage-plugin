@@ -1,6 +1,6 @@
 {
   "name": "@headlamp-k8s/backstage-plugin-headlamp-backend",
-  "version": "0.1.0-beta-2",
+  "version": "0.1.0-beta-3",
   "backstage": {
     "role": "backend-plugin",
     "pluginId": "headlamp",
@@ -30,6 +30,7 @@
     "build": "yarn tsc --declaration --declarationDir dist-types/src --outDir dist-types/src && backstage-cli package build",
     "clean": "backstage-cli package clean",
     "lint": "backstage-cli package lint",
+    "tsc": "tsc",
     "prepack": "backstage-cli package prepack",
     "postpack": "backstage-cli package postpack",
     "start": "backstage-cli package start",
@@ -57,9 +58,9 @@
     "winston": "^3.14.2"
   },
   "devDependencies": {
-    "@backstage/backend-test-utils": "workspace:^",
+    "@backstage/backend-test-utils": "^1.1.0",
     "@backstage/cli": "^0.25.0",
-    "@backstage/plugin-auth-backend-module-guest-provider": "workspace:^",
+    "@backstage/plugin-auth-backend-module-guest-provider": "^0.2.0",
     "@types/express": "*",
     "@types/supertest": "^2.0.8",
     "msw": "^2.0.8",

@@ -10,6 +10,8 @@ import { HttpAuthService } from "@backstage/backend-plugin-api";
 import fs from "fs";
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import { BackstageCredentials } from "@backstage/backend-plugin-api";
+import { ObjectsByEntityRequest } from "@backstage/plugin-kubernetes-backend";
+import { KubernetesRequestAuth } from "@backstage/plugin-kubernetes-common";
 
 export interface RouterOptions {
   logger: LoggerService;
@@ -48,8 +50,10 @@ export async function createRouter(
   router.post("/refreshKubeconfig", async (req, res) => {
     try {
       const credentials = await httpAuth.credentials(req);
+      const requestBody: ObjectsByEntityRequest = req.body; 
+      const auth = requestBody.auth;
 
-      const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials);
+      const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
 
       // write kubeconfig to file
       fs.writeFileSync(kubeconfigPath, kubeconfig);
@@ -64,11 +68,15 @@ export async function createRouter(
   router.post("/start", async (req, res) => {
     try {
       const credentials = await httpAuth.credentials(req);
+      const requestBody: ObjectsByEntityRequest = req.body;
+      const auth: KubernetesRequestAuth = requestBody.auth;
+
       if (!headlampProcess) {
         headlampProcess = await spawnHeadlamp(
           logger,
           credentials,
           kubernetesBuilder,
+          auth,
           headlampBinaryPath,
           kubeconfigPath,
           pluginsPath
@@ -76,7 +84,7 @@ export async function createRouter(
         res.json({ message: "Headlamp Server started" });
       } else {
         logger.info("Headlamp Server already running, refreshing kubeconfig");
-        const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials);
+        const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
 
         // write kubeconfig to file
         fs.writeFileSync(kubeconfigPath, kubeconfig);
@@ -98,12 +106,13 @@ async function spawnHeadlamp(
   logger: LoggerService,
   credentials: BackstageCredentials,
   kubernetesBuilder: HeadlampKubernetesBuilder,
+  auth: KubernetesRequestAuth,
   headlampBinaryPath: string,
   kubeconfigPath: string,
   pluginsPath: string
 ) {
   try {
-    const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials);
+    const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
     fs.writeFileSync(kubeconfigPath, kubeconfig);
   } catch (error) {
     logger.error(`Error creating kubeconfig from kubernetes config: ${error}`);
