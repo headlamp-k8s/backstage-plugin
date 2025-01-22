@@ -14,17 +14,29 @@ export class HeadlampClient implements HeadlampApi {
     return await this.discoveryApi.getBaseUrl('headlamp');
   }
 
-  async startServer(): Promise<void> {
+  async startServer(auth: {[key: string]: string}): Promise<void> {
     const baseUrl = await this.getBaseUrl();
     await this.fetchApi.fetch(`${baseUrl}/start`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        auth: auth,
+      }),
     });
   }
 
-  async refreshKubeconfig(): Promise<void> {
+  async refreshKubeconfig(auth: {[key: string]: string}): Promise<void> {
     const baseUrl = await this.getBaseUrl();
     await this.fetchApi.fetch(`${baseUrl}/refreshKubeconfig`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "auth": auth,
+      }),
     });
   }
 
