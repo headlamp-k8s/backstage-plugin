@@ -21,15 +21,14 @@ interface HeadlampMessage {
 export function HeadlampComponent() {
   const config = useApi(configApiRef);
   const headlampApi = useApi(headlampApiRef);
-  const [isLoaded, setIsLoaded] = useState(false);
   const refreshInterval = 5000;
   const [isStandalone, setIsStandalone] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-
+  const [serverRunning, setServerRunning] = useState(false);
+  const [serverStarted, setServerStarted] = useState(false);
+  const [iframeUrlReady, setIframeUrlReady] = useState(false);
   const kubernetesApi = useApi(kubernetesApiRef);
   const kubernetesAuthProvidersApi = useApi(kubernetesAuthProvidersApiRef);
-
-
 
   const fetchAuthTokenMap = async () => {
     const clusters = await kubernetesApi.getClusters();
@@ -50,24 +49,56 @@ export function HeadlampComponent() {
   }
 
   // Check if Headlamp is running standalone or not
-  // if not, start the server
   useEffect(() => {
     const checkHealth = async () => {
       const res = await headlampApi.health();
       const standalone = res?.status !== 'ok';
       setIsStandalone(standalone);
-      
-      if (!standalone) {
-        const authTokenMap = await fetchAuthTokenMap();
-
-        console.log('Starting Headlamp server');
-        headlampApi.startServer(authTokenMap);
-      }
     };
 
     checkHealth();
   }, [headlampApi]);
 
+  const checkServerRunning = async () => {
+    const res = await headlampApi.health();
+    setServerRunning(res?.serverRunning);
+  }
+
+  // Start server if not standalone
+  useEffect(() => {
+    const startServer = async () => {
+      if (!isStandalone && !serverStarted) {
+        const authTokenMap = await fetchAuthTokenMap();
+        await headlampApi.startServer(authTokenMap);
+        setServerStarted(true);
+      }
+    }
+    startServer();
+  }, [isStandalone, serverStarted]);
+
+  // Check server status only after server has been started
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const checkServerStatus = async () => {
+      if (!serverRunning) {
+        await checkServerRunning();
+        if (!serverRunning) {
+          timeoutId = setTimeout(checkServerStatus, refreshInterval);
+        }
+      }
+    };
+
+    if (!isStandalone && serverStarted && !serverRunning) {
+      checkServerStatus();
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isStandalone, serverStarted, serverRunning]);
 
   const [headlampUrl, setHeadlampUrl] = useState('');
   const [iframeSrc, setIframeSrc] = useState('');
@@ -87,33 +118,6 @@ export function HeadlampComponent() {
     const queryParams = new URLSearchParams(location.search).toString();
     setIframeSrc(queryParams ? `${headlampUrl}?${queryParams}` : headlampUrl);
   }, [headlampUrl, location.search]);
-
-  /**
-   * Checks if the Headlamp server is ready by making a fetch request.
-   * Sets the component as loaded if the server responds successfully.
-   */
-  useEffect(() => {
-    const checkHeadlampReady = async () => {
-      try {
-        const response = await fetch(`${headlampUrl}`);
-        if (response.ok) {
-          setIsLoaded(true);
-        } else {
-          throw new Error(`Headlamp not ready: ${response.statusText}`);
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to check Headlamp readiness:', err);
-      }
-    };
-
-    if (!isLoaded) {
-      checkHeadlampReady();
-      const timer = setInterval(checkHeadlampReady, refreshInterval);
-      return () => clearInterval(timer);
-    }
-    return undefined;
-  }, [isLoaded, headlampUrl]);
 
   /**
    * Handles messages received from the Headlamp server.
@@ -160,9 +164,9 @@ export function HeadlampComponent() {
     return undefined;
   }, [isStandalone, headlampApi]);
 
-
   const identityApi = useApi(identityApiRef);
   useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
     
     const syncToken = async () => {
       console.log('Syncing token');
@@ -181,34 +185,89 @@ export function HeadlampComponent() {
         console.error('Error syncing token', error);
       }
     }
-    
-    // wait for iframe to load before syncing token
-    if (iframeRef.current) {
+
+    // Only start token syncing if server is running
+    if (serverRunning && iframeRef.current) {
+      // Initial sync when iframe loads
       iframeRef.current.addEventListener('load', syncToken);
+
+      syncToken();
+      // Set up polling for token changes
+      let previousToken = '';
+      pollInterval = setInterval(async () => {
+        try {
+          const {token} = await identityApi.getCredentials();
+          if (token && token !== previousToken) {
+            previousToken = token;
+            syncToken();
+          }
+        } catch (error) {
+          console.error('Error checking token', error);
+        }
+      }, refreshInterval);
     }
 
-    let previousToken = ''
-    const pollInterval = setInterval(async () => {
-      try{
-        const {token} = await identityApi.getCredentials();
-        if (token && token !== previousToken){
-          previousToken = token;
-          syncToken();
-        }
-      } catch (error){
-        console.error('Error checking token', error);
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
       }
-    }, 15000);
-    
-    return () => clearInterval(pollInterval);
+      if (iframeRef.current) {
+        iframeRef.current.removeEventListener('load', syncToken);
+      }
+    };
+  }, [identityApi, iframeSrc, serverRunning,iframeUrlReady]);
 
-  }, [identityApi,iframeSrc]);
+  // Check if the iframe URL is responding with valid HTML
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
 
-  if (!isLoaded) {
+    const checkIframeUrl = async () => {
+      if (iframeSrc && !iframeUrlReady) {
+        try {
+          const response = await fetch(iframeSrc);
+          if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
+            setIframeUrlReady(true);
+            // Clear any existing timeout since we're ready
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+          } else {
+            // If not ready, check again after interval
+            timeoutId = setTimeout(checkIframeUrl, refreshInterval);
+          }
+        } catch (error) {
+          console.error('Error checking iframe URL:', error);
+          // If error occurs, check again after interval
+          timeoutId = setTimeout(checkIframeUrl, refreshInterval);
+        }
+      }
+    };
+
+    // Only start checking if we have a URL and it's not ready yet
+    if (iframeSrc && !iframeUrlReady) {
+      checkIframeUrl();
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [iframeSrc, iframeUrlReady, refreshInterval]);
+
+  // Show loading in these cases:
+  // 1. Not standalone and server not started yet
+  // 2. Not standalone and server started but not running yet
+  // 3. URL or iframeSrc not initialized yet
+  // 4. Iframe URL not responding with valid HTML yet
+  if ((!isStandalone && (!serverStarted || !serverRunning)) || 
+      !headlampUrl || 
+      !iframeSrc || 
+      !iframeUrlReady) {
     return <Progress />;
   }
 
-
+  // Only render iframe when server is running, URLs are set, and iframe URL is responding
   return (
     <iframe
       ref={iframeRef}

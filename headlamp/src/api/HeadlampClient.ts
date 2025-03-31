@@ -40,7 +40,7 @@ export class HeadlampClient implements HeadlampApi {
     });
   }
 
-  async health(): Promise<{ status: string }> {
+  async health(): Promise<{ status: string; serverRunning: boolean }> {
     const baseUrl = await this.getBaseUrl();
     const response = await this.fetchApi.fetch(`${baseUrl}/health`);
     return await response.json();
