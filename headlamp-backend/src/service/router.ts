@@ -46,7 +46,7 @@ export async function createRouter(
   router.use(express.json());
 
   router.get("/health", (_, response) => {
-    response.json({ status: "ok" });
+      response.json({ status: "ok", serverRunning: headlampProcess !== null});
   });
 
   router.post("/refreshKubeconfig", async (req, res) => {
