@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Progress } from '@backstage/core-components';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { configApiRef, useApi } from '@backstage/core-plugin-api';
+import { configApiRef, useApi, identityApiRef } from '@backstage/core-plugin-api';
 import { headlampApiRef } from '../../api/types';
 import { kubernetesApiRef,kubernetesAuthProvidersApiRef } from '@backstage/plugin-kubernetes-react';
 
@@ -24,9 +24,11 @@ export function HeadlampComponent() {
   const [isLoaded, setIsLoaded] = useState(false);
   const refreshInterval = 5000;
   const [isStandalone, setIsStandalone] = useState(true);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const kubernetesApi = useApi(kubernetesApiRef);
   const kubernetesAuthProvidersApi = useApi(kubernetesAuthProvidersApiRef);
+
 
 
   const fetchAuthTokenMap = async () => {
@@ -67,11 +69,24 @@ export function HeadlampComponent() {
   }, [headlampApi]);
 
 
-  const headlampUrl =
-    config.getOptionalString('headlamp.url') ||
-    `${window.location.protocol}//${window.location.hostname}:4466`;
+  const [headlampUrl, setHeadlampUrl] = useState('');
+  const [iframeSrc, setIframeSrc] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const initUrl = async () => {
+      const baseUrl = await headlampApi.getBaseUrl();
+      const url = config.getOptionalString('headlamp.url') || (baseUrl.endsWith('/') ? baseUrl : baseUrl + '/');
+      setHeadlampUrl(url);
+    };
+    initUrl();
+  }, [config]);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search).toString();
+    setIframeSrc(queryParams ? `${headlampUrl}?${queryParams}` : headlampUrl);
+  }, [headlampUrl, location.search]);
 
   /**
    * Checks if the Headlamp server is ready by making a fetch request.
@@ -145,15 +160,58 @@ export function HeadlampComponent() {
     return undefined;
   }, [isStandalone, headlampApi]);
 
+
+  const identityApi = useApi(identityApiRef);
+  useEffect(() => {
+    
+    const syncToken = async () => {
+      console.log('Syncing token');
+      try{
+        const {token} = await identityApi.getCredentials();
+        if (!token || !iframeRef.current) return;
+
+        // Post the token to the iframe
+        iframeRef.current.contentWindow?.postMessage({
+          type: 'BACKSTAGE_AUTH_TOKEN', payload: {token},
+        }, new URL(iframeSrc).origin)
+
+        console.log('Token posted to iframe');
+
+      } catch (error){
+        console.error('Error syncing token', error);
+      }
+    }
+    
+    // wait for iframe to load before syncing token
+    if (iframeRef.current) {
+      iframeRef.current.addEventListener('load', syncToken);
+    }
+
+    let previousToken = ''
+    const pollInterval = setInterval(async () => {
+      try{
+        const {token} = await identityApi.getCredentials();
+        if (token && token !== previousToken){
+          previousToken = token;
+          syncToken();
+        }
+      } catch (error){
+        console.error('Error checking token', error);
+      }
+    }, 15000);
+    
+    return () => clearInterval(pollInterval);
+
+  }, [identityApi,iframeSrc]);
+
   if (!isLoaded) {
     return <Progress />;
   }
 
-  const queryParams = new URLSearchParams(location.search).toString();
-  const iframeSrc = queryParams ? `${headlampUrl}?${queryParams}` : headlampUrl;
 
   return (
     <iframe
+      ref={iframeRef}
       src={iframeSrc}
       title="Headlamp"
       style={{

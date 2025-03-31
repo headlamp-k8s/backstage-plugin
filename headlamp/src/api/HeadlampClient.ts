@@ -10,7 +10,7 @@ export class HeadlampClient implements HeadlampApi {
     this.fetchApi = options.fetchApi;
   }
 
-  private async getBaseUrl() {
+  async getBaseUrl() {
     return await this.discoveryApi.getBaseUrl('headlamp');
   }
 
