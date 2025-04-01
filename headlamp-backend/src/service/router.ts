@@ -12,6 +12,8 @@ import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 import { BackstageCredentials } from "@backstage/backend-plugin-api";
 import { ObjectsByEntityRequest } from "@backstage/plugin-kubernetes-backend";
 import { KubernetesRequestAuth } from "@backstage/plugin-kubernetes-common";
+import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
+import path from "path";
 
 export interface RouterOptions {
   logger: LoggerService;
@@ -44,7 +46,7 @@ export async function createRouter(
   router.use(express.json());
 
   router.get("/health", (_, response) => {
-    response.json({ status: "ok" });
+      response.json({ status: "ok", serverRunning: headlampProcess !== null});
   });
 
   router.post("/refreshKubeconfig", async (req, res) => {
@@ -99,8 +101,85 @@ export async function createRouter(
   const middleware = MiddlewareFactory.create({ logger, config });
 
   router.use(middleware.error());
+
+  // List of all static asset paths that headlamp serves
+  const staticAssetPaths = [
+    '/assets',
+    '/android-chrome',
+    '/apple-touch-icon',
+    '/favicon',
+    '/icon',
+    '/logo',
+    '/mstile',
+    '/safari-pinned-tab',
+    '/manifest.json',
+    '/robots.txt',
+    '/mockServiceWorker.js',
+    '/index.html'
+  ];
+
+  async function authenticateRequest(req,res,next){
+
+    console.log(`Authenticating request: ${req.path}`);
+    // Skip authentication for static assets
+    if (staticAssetPaths.some(assetPath => req.path.startsWith(assetPath)) || req.path === '/')  {
+      next();
+      return;
+    }
+
+    const token = req.headers['x-backstage-token'];
+    if (!token) {
+      res.status(401).json({ message: "Unauthorized - No token provided" });
+      return;
+    }
+
+    try {
+      // Create a separate request object for token validation
+      const authReq = { ...req };
+      authReq.headers = { ...req.headers };
+      authReq.headers.authorization = `Bearer ${token}`;
+      
+      // Verify the token using Backstage's auth service
+      const credentials = await httpAuth.credentials(authReq);
+      if (!credentials) {
+        res.status(401).json({ message: "Unauthorized - Invalid token" });
+        return;
+      }
+      next();
+    } catch (error) {
+      logger.error(`Authentication error: ${error}`);
+      res.status(401).json({ message: "Unauthorized - Authentication failed" });
+    }
+  }
+
+  const proxy = createProxyMiddleware({
+    target: "http://localhost:4466",
+    ws: true,
+    secure: false,
+    changeOrigin: true,
+    logLevel: "debug",
+    onProxyReq: fixRequestBody,
+    onProxyRes: (proxyRes, req, res) => {
+      logger.info(`Received response from Headlamp: ${proxyRes.statusCode}`);
+      res.setHeader(
+        'Content-Security-Policy',
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval';`
+      );
+
+      // Allow embedding in iframes
+      res.setHeader('X-Frame-Options', 'ALLOWALL');
+    },
+    onError: (err, req, res) => {
+      logger.error(`Error proxying request: ${err}`);
+      res.status(500).json({ message: "Error proxying request" });
+    }
+  });
+
+  router.use("/", authenticateRequest, proxy);
+
   return router;
 }
+
 
 async function spawnHeadlamp(
   logger: LoggerService,
@@ -122,6 +201,8 @@ async function spawnHeadlamp(
     kubeconfigPath,
     "--plugins-dir",
     pluginsPath,
+    "--base-url",
+    "/api/headlamp"
   ]);
 
   headlampProcess.stdout.on("data", (data) => {
