@@ -10,7 +10,7 @@ export class HeadlampClient implements HeadlampApi {
     this.fetchApi = options.fetchApi;
   }
 
-  private async getBaseUrl() {
+  async getBaseUrl() {
     return await this.discoveryApi.getBaseUrl('headlamp');
   }
 
@@ -40,7 +40,7 @@ export class HeadlampClient implements HeadlampApi {
     });
   }
 
-  async health(): Promise<{ status: string }> {
+  async health(): Promise<{ status: string; serverRunning: boolean }> {
     const baseUrl = await this.getBaseUrl();
     const response = await this.fetchApi.fetch(`${baseUrl}/health`);
     return await response.json();
