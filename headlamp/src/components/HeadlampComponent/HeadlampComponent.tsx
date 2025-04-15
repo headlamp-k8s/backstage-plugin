@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { configApiRef, useApi } from '@backstage/core-plugin-api';
 import { headlampApiRef } from '../../api/types';
 import { kubernetesApiRef,kubernetesAuthProvidersApiRef } from '@backstage/plugin-kubernetes-react';
+import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
 
 
 /**
@@ -31,19 +32,21 @@ export function HeadlampComponent() {
 
   const fetchAuthTokenMap = async () => {
     const clusters = await kubernetesApi.getClusters();
-    const clusterNames: string[] = []
-    clusters.forEach(c=>{
-      clusterNames.push(
-        `${c.authProvider}${
-          c.oidcTokenProvider ? `.${c.oidcTokenProvider}` : ''
-        }`)
-    })
+    const authTokenMap: KubernetesRequestAuth = {};
+    clusters.forEach(async c => {
+      const { authProvider, oidcTokenProvider } = c;
+      const authProviderKey =
+        authProvider === 'oidc' ? `oidc.${oidcTokenProvider}` : authProvider;
+      const auth =
+        await kubernetesAuthProvidersApi.getCredentials(authProviderKey);
+      if (authProvider === 'oidc') {
+        authTokenMap.oidc ??= {};
+        authTokenMap.oidc[oidcTokenProvider] = auth.token;
+      } else {
+        authTokenMap[authProvider] = auth.token;
+      }
+    });
 
-    const authTokenMap: {[key: string]: string} = {}
-    for (const clusterName of clusterNames) {
-      const auth = await kubernetesAuthProvidersApi.getCredentials(clusterName);
-      authTokenMap[clusterName] = auth.token;
-    }
     return authTokenMap;
   }
 

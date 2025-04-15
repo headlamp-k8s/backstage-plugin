@@ -1,8 +1,9 @@
 import { createApiRef } from '@backstage/core-plugin-api';
+import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
 
 export interface HeadlampApi {
-  startServer(auth: {[key: string]: string}): Promise<void>;
-  refreshKubeconfig(auth: {[key: string]: string}): Promise<void>;
+  startServer(auth: KubernetesRequestAuth): Promise<void>;
+  refreshKubeconfig(auth: KubernetesRequestAuth): Promise<void>;
   health(): Promise<{ status: string }>;
 }
 
