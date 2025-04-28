@@ -1,4 +1,5 @@
 import { DiscoveryApi, FetchApi } from '@backstage/core-plugin-api';
+import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
 import { HeadlampApi } from './types';
 
 export class HeadlampClient implements HeadlampApi {
@@ -14,7 +15,7 @@ export class HeadlampClient implements HeadlampApi {
     return await this.discoveryApi.getBaseUrl('headlamp');
   }
 
-  async startServer(auth: {[key: string]: string}): Promise<void> {
+  async startServer(auth: KubernetesRequestAuth): Promise<void> {
     const baseUrl = await this.getBaseUrl();
     await this.fetchApi.fetch(`${baseUrl}/start`, {
       method: 'POST',
@@ -27,7 +28,7 @@ export class HeadlampClient implements HeadlampApi {
     });
   }
 
-  async refreshKubeconfig(auth: {[key: string]: string}): Promise<void> {
+  async refreshKubeconfig(auth: KubernetesRequestAuth): Promise<void> {
     const baseUrl = await this.getBaseUrl();
     await this.fetchApi.fetch(`${baseUrl}/refreshKubeconfig`, {
       method: 'POST',
