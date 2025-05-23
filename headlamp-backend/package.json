@@ -41,7 +41,7 @@
     "@backstage/backend-plugin-api": "^0.8.0",
     "@backstage/catalog-client": "^1.6.5",
     "@backstage/config": "^1.2.0",
-    "@backstage/errors": "^1.2.4",
+    "@backstage/errors": "^1.2.7",
     "@backstage/plugin-catalog-node": "^1.12.5",
     "@backstage/plugin-kubernetes-backend": "^0.18.4",
     "@backstage/plugin-kubernetes-common": "^0.8.2",
