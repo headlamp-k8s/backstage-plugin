@@ -1,6 +1,6 @@
 {
-  "name": "@headlamp-k8s/backstage-plugin-headlamp-backend",
-  "version": "0.1.0-beta-3",
+  "name": "@yolossn/backstage-plugin-headlamp-backend",
+  "version": "0.1.0-beta-19",
   "backstage": {
     "role": "backend-plugin",
     "pluginId": "headlamp",
@@ -49,12 +49,15 @@
     "@backstage/plugin-permission-common": "^0.8.1",
     "@backstage/types": "^1.1.1",
     "@google-cloud/container": "^5.17.0",
+    "cors": "^2.8.5",
     "express": "^4.17.1",
     "express-promise-router": "^4.1.0",
     "http-proxy-middleware": "^2.0.0",
     "js-yaml": "^4.1.0",
     "luxon": "^3.5.0",
     "node-fetch": "^2.6.7",
+    "tar": "^6.2.0",
+    "uuid": "^11.1.0",
     "winston": "^3.14.2"
   },
   "devDependencies": {

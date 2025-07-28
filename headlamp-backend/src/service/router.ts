@@ -7,13 +7,40 @@ import express from "express";
 import Router from "express-promise-router";
 import { HeadlampKubernetesBuilder } from "../headlamp";
 import { HttpAuthService } from "@backstage/backend-plugin-api";
-import fs from "fs";
-import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import { BackstageCredentials } from "@backstage/backend-plugin-api";
+import { spawn } from "child_process";
 import { ObjectsByEntityRequest } from "@backstage/plugin-kubernetes-backend";
 import { KubernetesRequestAuth } from "@backstage/plugin-kubernetes-common";
 import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
-import path from "path";
+
+
+
+async function spawnHeadlamp(
+  logger: LoggerService,
+  headlampBinaryPath: string,
+  kubeconfigPath: string,
+  pluginsPath: string
+) {
+  const headlampProcess = spawn(headlampBinaryPath, [
+    "--kubeconfig",
+    kubeconfigPath,
+    "--plugins-dir",
+    pluginsPath,
+    "--base-url",
+    "/api/headlamp",
+    "--enable-dynamic-clusters"
+  ]);
+
+  headlampProcess.stdout.on("data", (data) => {
+    logger.info(`Headlamp Server stdout: ${data}`);
+  });
+
+  headlampProcess.stderr.on("data", (data) => {
+    logger.error(`Headlamp Server stderr: ${data}`);
+  });
+
+  return headlampProcess;
+}
+
 
 export interface RouterOptions {
   logger: LoggerService;
@@ -38,8 +65,10 @@ export async function createRouter(
     pluginsPath,
   } = options;
 
+  // spawn headlamp server
+  const headlampProcess = await spawnHeadlamp(logger, headlampBinaryPath, kubeconfigPath, pluginsPath);
+
   const router = Router();
-  let headlampProcess: ChildProcessWithoutNullStreams | null = null;
 
   logger.info("Creating Headlamp Server router");
 
@@ -49,55 +78,21 @@ export async function createRouter(
       response.json({ status: "ok", serverRunning: headlampProcess !== null});
   });
 
-  router.post("/refreshKubeconfig", async (req, res) => {
-    try {
-      const credentials = await httpAuth.credentials(req);
-      const requestBody: ObjectsByEntityRequest = req.body; 
-      const auth = requestBody.auth;
-
-      const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
-
-      // write kubeconfig to file
-      fs.writeFileSync(kubeconfigPath, kubeconfig);
-      res.json({ status: "ok" });
-    } catch (error) {
-      logger.error(`Error refreshing kubeconfig: ${error}`);
-      res.status(500).json({ message: "Error refreshing kubeconfig" });
-    }
-  });
-
-  // spawn headlamp server if not already running
-  router.post("/start", async (req, res) => {
+  router.post("/fetchKubeconfig", async (req, res) => {
     try {
       const credentials = await httpAuth.credentials(req);
       const requestBody: ObjectsByEntityRequest = req.body;
       const auth: KubernetesRequestAuth = requestBody.auth;
 
-      if (!headlampProcess) {
-        headlampProcess = await spawnHeadlamp(
-          logger,
-          credentials,
-          kubernetesBuilder,
-          auth,
-          headlampBinaryPath,
-          kubeconfigPath,
-          pluginsPath
-        );
-        res.json({ message: "Headlamp Server started" });
-      } else {
-        logger.info("Headlamp Server already running, refreshing kubeconfig");
-        const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
-
-        // write kubeconfig to file
-        fs.writeFileSync(kubeconfigPath, kubeconfig);
-        res.json({ message: "Headlamp Server kubeconfig refreshed" });
-      }
+      const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
+      res.json({ "kubeconfig": Buffer.from(kubeconfig).toString('base64') });
     } catch (error) {
-      logger.error(`Error starting Headlamp Server: ${error}`);
-      res.status(500).json({ message: "Error starting Headlamp Server" });
+      logger.error(`Error fetching kubeconfig: ${error}`);
+      res.status(500).json({ message: "Error fetching kubeconfig" });
     }
   });
 
+  // spawn headlamp server if not already running
   const middleware = MiddlewareFactory.create({ logger, config });
 
   router.use(middleware.error());
@@ -119,6 +114,13 @@ export async function createRouter(
   ];
 
   async function authenticateRequest(req,res,next){
+
+    // if request is websocket, skip authentication
+    const isWebSocket = req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket';
+    if (isWebSocket) {
+      next();
+      return;
+    }
 
     console.log(`Authenticating request: ${req.path}`);
     // Skip authentication for static assets
@@ -158,7 +160,12 @@ export async function createRouter(
     secure: false,
     changeOrigin: true,
     logLevel: "debug",
-    onProxyReq: fixRequestBody,
+    // onProxyReq: fixRequestBody,
+    onProxyReq: (proxyReq, req, res) => {
+      logger.info(`Received request from Headlamp: ${proxyReq.path}`);
+      proxyReq.path = req.path;
+      fixRequestBody(proxyReq, req);
+    },
     onProxyRes: (proxyRes, req, res) => {
       logger.info(`Received response from Headlamp: ${proxyRes.statusCode}`);
       res.setHeader(
@@ -181,37 +188,3 @@ export async function createRouter(
 }
 
 
-async function spawnHeadlamp(
-  logger: LoggerService,
-  credentials: BackstageCredentials,
-  kubernetesBuilder: HeadlampKubernetesBuilder,
-  auth: KubernetesRequestAuth,
-  headlampBinaryPath: string,
-  kubeconfigPath: string,
-  pluginsPath: string
-) {
-  try {
-    const kubeconfig = await kubernetesBuilder.getKubeconfig(credentials,auth);
-    fs.writeFileSync(kubeconfigPath, kubeconfig);
-  } catch (error) {
-    logger.error(`Error creating kubeconfig from kubernetes config: ${error}`);
-  }
-  const headlampProcess = spawn(headlampBinaryPath, [
-    "--kubeconfig",
-    kubeconfigPath,
-    "--plugins-dir",
-    pluginsPath,
-    "--base-url",
-    "/api/headlamp"
-  ]);
-
-  headlampProcess.stdout.on("data", (data) => {
-    logger.info(`Headlamp Server stdout: ${data}`);
-  });
-
-  headlampProcess.stderr.on("data", (data) => {
-    logger.error(`Headlamp Server stderr: ${data}`);
-  });
-
-  return headlampProcess;
-}

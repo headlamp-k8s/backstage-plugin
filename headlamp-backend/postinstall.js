@@ -17,25 +17,25 @@ const arch = os.arch();
 // Binary download URLs per platform/arch
 const BINARY_VERSIONS = {
   win32: {
-    x64: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_windows_amd64.exe.tar.gz",
-    arm64: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_windows_arm64.exe.tar.gz",
-    ia32: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_windows_386.exe.tar.gz"
+    x64: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__windows_amd64.exe.tar.gz",
+    arm64: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__windows_arm64.exe.tar.gz",
+    ia32: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__windows_386.exe.tar.gz"
   },
   darwin: {
-    x64: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_darwin_amd64.tar.gz",
-    arm64: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_darwin_arm64.tar.gz"
+    x64: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__darwin_amd64.tar.gz",
+    arm64: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__darwin_arm64.tar.gz"
   },
   linux: {
-    x64: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_linux_amd64.tar.gz",
-    arm64: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_linux_arm64.tar.gz",
-    ia32: "https://github.com/headlamp-k8s/backstage-plugin/releases/download/headlamp_standalone_0.26.0-beta-1/headlamp_standalone_0.26.0-beta-1_linux_386.tar.gz"
+    x64: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__linux_amd64.tar.gz",
+    arm64: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__linux_arm64.tar.gz",
+    ia32: "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp_app__linux_386.tar.gz"
   }
 };
 
 function downloadPlugins() {
   const plugins = {
     backstage:
-      "https://github.com/headlamp-k8s/plugins/releases/download/backstage-0.1.0-beta-1/headlamp-k8s-backstage-0.1.0-beta-1.tar.gz",
+      "https://github.com/yolossn/headlamp-backstage-plugin/releases/download/0.0.1/headlamp-k8s-backstage-0.0.1.tar.gz",
   };
 
   const pluginsDir = path.join(rootDir, "plugins");

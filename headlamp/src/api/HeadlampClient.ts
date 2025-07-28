@@ -14,9 +14,9 @@ export class HeadlampClient implements HeadlampApi {
     return await this.discoveryApi.getBaseUrl('headlamp');
   }
 
-  async startServer(auth: {[key: string]: string}): Promise<void> {
+  async fetchKubeconfig(auth: {[key: string]: string}): Promise<{ kubeconfig: string }> {
     const baseUrl = await this.getBaseUrl();
-    await this.fetchApi.fetch(`${baseUrl}/start`, {
+    const response = await this.fetchApi.fetch(`${baseUrl}/fetchKubeconfig`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -25,20 +25,35 @@ export class HeadlampClient implements HeadlampApi {
         auth: auth,
       }),
     });
+    const data = await response.json();
+    return { kubeconfig: data.kubeconfig };
   }
 
-  async refreshKubeconfig(auth: {[key: string]: string}): Promise<void> {
-    const baseUrl = await this.getBaseUrl();
-    await this.fetchApi.fetch(`${baseUrl}/refreshKubeconfig`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "auth": auth,
-      }),
-    });
-  }
+  // async startServer(auth: {[key: string]: string}): Promise<void> {
+  //   const baseUrl = await this.getBaseUrl();
+  //   await this.fetchApi.fetch(`${baseUrl}/start`, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //     },
+  //     body: JSON.stringify({
+  //       auth: auth,
+  //     }),
+  //   });
+  // }
+
+  // async refreshKubeconfig(auth: {[key: string]: string}): Promise<void> {
+  //   const baseUrl = await this.getBaseUrl();
+  //   await this.fetchApi.fetch(`${baseUrl}/refreshKubeconfig`, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //     },
+  //     body: JSON.stringify({
+  //       "auth": auth,
+  //     }),
+  //   });
+  // }
 
   async health(): Promise<{ status: string; serverRunning: boolean }> {
     const baseUrl = await this.getBaseUrl();
