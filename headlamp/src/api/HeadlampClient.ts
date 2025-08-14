@@ -1,6 +1,7 @@
 import { DiscoveryApi, FetchApi } from '@backstage/core-plugin-api';
-import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
 import { HeadlampApi } from './types';
+import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
+
 
 export class HeadlampClient implements HeadlampApi {
   private readonly discoveryApi: DiscoveryApi;
@@ -11,13 +12,13 @@ export class HeadlampClient implements HeadlampApi {
     this.fetchApi = options.fetchApi;
   }
 
-  private async getBaseUrl() {
+  async getBaseUrl() {
     return await this.discoveryApi.getBaseUrl('headlamp');
   }
 
-  async startServer(auth: KubernetesRequestAuth): Promise<void> {
+  async fetchKubeconfig(auth: KubernetesRequestAuth): Promise<{ kubeconfig: string }> {
     const baseUrl = await this.getBaseUrl();
-    await this.fetchApi.fetch(`${baseUrl}/start`, {
+    const response = await this.fetchApi.fetch(`${baseUrl}/fetchKubeconfig`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,22 +27,11 @@ export class HeadlampClient implements HeadlampApi {
         auth: auth,
       }),
     });
+    const data = await response.json();
+    return { kubeconfig: data.kubeconfig };
   }
 
-  async refreshKubeconfig(auth: KubernetesRequestAuth): Promise<void> {
-    const baseUrl = await this.getBaseUrl();
-    await this.fetchApi.fetch(`${baseUrl}/refreshKubeconfig`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "auth": auth,
-      }),
-    });
-  }
-
-  async health(): Promise<{ status: string }> {
+  async health(): Promise<{ status: string; serverRunning: boolean }> {
     const baseUrl = await this.getBaseUrl();
     const response = await this.fetchApi.fetch(`${baseUrl}/health`);
     return await response.json();
