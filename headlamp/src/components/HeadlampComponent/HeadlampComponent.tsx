@@ -1,11 +1,63 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Progress } from '@backstage/core-components';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { configApiRef, useApi } from '@backstage/core-plugin-api';
-import { headlampApiRef } from '../../api/types';
-import { kubernetesApiRef,kubernetesAuthProvidersApiRef } from '@backstage/plugin-kubernetes-react';
-import { KubernetesRequestAuth } from '@backstage/plugin-kubernetes-common';
+import IconButton from '@mui/material/IconButton';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import MenuItem from '@material-ui/core/MenuItem';
+import MenuList from '@material-ui/core/MenuList';
+import Popover from '@material-ui/core/Popover';
+import { makeStyles, Theme } from '@material-ui/core/styles';
+import MoreVert from '@material-ui/icons/MoreVert';
+import VpnKeyIcon from '@material-ui/icons/VpnKey';
+import SecurityIcon from '@material-ui/icons/Security';
+import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
 
+// Backstage imports
+import { configApiRef, useApi, identityApiRef } from '@backstage/core-plugin-api';
+import { Header } from '@backstage/core-components';
+import { kubernetesApiRef, kubernetesAuthProvidersApiRef } from '@backstage/plugin-kubernetes-react';
+import { headlampApiRef } from '../../api/types';
+
+interface StyleProps {
+  isHeaderVisible: boolean;
+}
+
+const useStyles = makeStyles<Theme, StyleProps>(theme => ({
+  button: {
+    color: theme.page.fontColor,
+  },
+  headerContainer: {
+    position: 'relative',
+  },
+  toggleStrip: {
+    height: 24,
+    width: '100%',
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: '0 0 8px 8px',
+    boxShadow: theme.shadows[1],
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: theme.palette.background.default,
+    },
+  },
+  iframeContainer: {
+    height: props => (props.isHeaderVisible ? 'calc(100vh - 88px)' : '100vh'),
+    transition: 'height 0.3s ease-in-out',
+  },
+  iframe: {
+    width: '100%',
+    height: '100%',
+    border: 'none',
+    display: 'block',
+  },
+}));
 
 /**
  * HeadlampMessage is the type for messages received from headlamp iframe.
@@ -15,155 +67,373 @@ interface HeadlampMessage {
   redirectPath: string;
 }
 
-/**
- * HeadlampComponent is responsible for rendering an iframe that displays
- * the Headlamp UI and handles messages from the iframe.
- */
+interface MoreOptionsProps {
+  onSendToken: () => void;
+  onShareKubeconfig: () => void;
+  isTokenSending: boolean;
+  isKubeconfigSending: boolean;
+  onClose: () => void;
+  popoverOpen: boolean;
+}
+
+function MoreOptions({
+  onSendToken,
+  onShareKubeconfig,
+  isTokenSending,
+  isKubeconfigSending,
+  onClose,
+  popoverOpen,
+}: MoreOptionsProps) {
+  const classes = useStyles({ isHeaderVisible: false });
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement>();
+
+  const onOpen = (event: React.SyntheticEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+    onClose();
+  };
+
+  const handleClose = () => {
+    setAnchorEl(undefined);
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!popoverOpen) {
+      setAnchorEl(undefined);
+    }
+  }, [popoverOpen]);
+
+  return (
+    <>
+      <IconButton
+        id="headlamp-menu"
+        aria-label="More options"
+        onClick={onOpen}
+        data-testid="menu-button"
+        color="inherit"
+        className={classes.button}
+      >
+        <MoreVert />
+      </IconButton>
+      <Popover
+        open={Boolean(anchorEl) && popoverOpen}
+        onClose={handleClose}
+        anchorEl={anchorEl}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuList>
+          <MenuItem onClick={() => { onSendToken(); handleClose(); }} disabled={isTokenSending}>
+            <ListItemIcon>
+              {isTokenSending ? <CircularProgress size={20} /> : <VpnKeyIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText primary={isTokenSending ? "Sharing Token..." : "Manually Share Token"} />
+          </MenuItem>
+          <MenuItem onClick={() => { onShareKubeconfig(); handleClose(); }} disabled={isKubeconfigSending}>
+            <ListItemIcon>
+              {isKubeconfigSending ? <CircularProgress size={20} /> : <SecurityIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText primary={isKubeconfigSending ? "Sharing Kubeconfig..." : "Manually Share Kubeconfig"} />
+          </MenuItem>
+        </MenuList>
+      </Popover>
+    </>
+  );
+}
+
+
+
 export function HeadlampComponent() {
+  const [isHeaderVisible, setIsHeaderVisible] = useState(false);
+  const [isStandalone, setIsStandalone] = useState<boolean | undefined>(undefined);
+  const [isTokenSending, setIsTokenSending] = useState(false);
+  const [isKubeconfigSending, setIsKubeconfigSending] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [iframeURL, setIframeURL] = useState('');
+  const [credentialsSent, setCredentialsSent] = useState(false);
+  const [headlampReady, setHeadlampReady] = useState(false);
+  const [tokenAcknowledged, setTokenAcknowledged] = useState(false);
+  const [kubeconfigAcknowledged, setKubeconfigAcknowledged] = useState(false);
+   
+  const classes = useStyles({ isHeaderVisible });
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Backstage APIs
   const config = useApi(configApiRef);
   const headlampApi = useApi(headlampApiRef);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const refreshInterval = 5000;
-  const [isStandalone, setIsStandalone] = useState(true);
-
   const kubernetesApi = useApi(kubernetesApiRef);
   const kubernetesAuthProvidersApi = useApi(kubernetesAuthProvidersApiRef);
-
-
-  const fetchAuthTokenMap = async () => {
-    const clusters = await kubernetesApi.getClusters();
-    const authTokenMap: KubernetesRequestAuth = {};
-    clusters.forEach(async c => {
-      const { authProvider, oidcTokenProvider } = c;
-      const authProviderKey =
-        authProvider === 'oidc' ? `oidc.${oidcTokenProvider}` : authProvider;
-      const auth =
-        await kubernetesAuthProvidersApi.getCredentials(authProviderKey);
-      if (authProvider === 'oidc') {
-        authTokenMap.oidc ??= {};
-        authTokenMap.oidc[oidcTokenProvider] = auth.token;
-      } else {
-        authTokenMap[authProvider] = auth.token;
-      }
-    });
-
-    return authTokenMap;
-  }
-
-  // Check if Headlamp is running standalone or not
-  // if not, start the server
-  useEffect(() => {
-    const checkHealth = async () => {
-      const res = await headlampApi.health();
-      const standalone = res?.status !== 'ok';
-      setIsStandalone(standalone);
-      
-      if (!standalone) {
-        const authTokenMap = await fetchAuthTokenMap();
-
-        console.log('Starting Headlamp server');
-        headlampApi.startServer(authTokenMap);
-      }
-    };
-
-    checkHealth();
-  }, [headlampApi]);
-
-
-  const headlampUrl =
-    config.getOptionalString('headlamp.url') ||
-    `${window.location.protocol}//${window.location.hostname}:4466`;
+  const identityApi = useApi(identityApiRef);
   const navigate = useNavigate();
   const location = useLocation();
 
-  /**
-   * Checks if the Headlamp server is ready by making a fetch request.
-   * Sets the component as loaded if the server responds successfully.
-   */
-  useEffect(() => {
-    const checkHeadlampReady = async () => {
-      try {
-        const response = await fetch(`${headlampUrl}`);
-        if (response.ok) {
-          setIsLoaded(true);
-        } else {
-          throw new Error(`Headlamp not ready: ${response.statusText}`);
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to check Headlamp readiness:', err);
-      }
-    };
-
-    if (!isLoaded) {
-      checkHeadlampReady();
-      const timer = setInterval(checkHeadlampReady, refreshInterval);
-      return () => clearInterval(timer);
-    }
-    return undefined;
-  }, [isLoaded, headlampUrl]);
-
-  /**
-   * Handles messages received from the Headlamp server.
-   * Navigates to a new path if a redirectPath is provided in the message.
-   *
-   * @param {MessageEvent} event - The message event from the Headlamp server.
-   */
-  const handleMessage = useCallback(
+  // Handle messages from iframe
+  const handleIframeMessage = useCallback(
     (event: MessageEvent) => {
-      if (event.origin !== new URL(headlampUrl).origin) return;
-
-      const data: HeadlampMessage = event.data;
-
+      if (event.origin !== new URL(iframeURL).origin) return;
+      
+      const data = event.data;
+      
+      // Handle HEADLAMP_READY message
+      if (data.type === 'HEADLAMP_READY') {
+        console.log('Received HEADLAMP_READY message from iframe');
+        setHeadlampReady(true);
+        return;
+      }
+      
+      // Handle token acknowledgment
+      if (data.type === 'BACKSTAGE_AUTH_TOKEN_ACK') {
+        console.log('Token acknowledged by Headlamp iframe');
+        setTokenAcknowledged(true);
+        setIsTokenSending(false);
+        setSnackbarMessage('Token sent successfully');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      // Handle kubeconfig acknowledgment
+      if (data.type === 'BACKSTAGE_KUBECONFIG_ACK') {
+        console.log('Kubeconfig acknowledged by Headlamp iframe');
+        setKubeconfigAcknowledged(true);
+        setIsKubeconfigSending(false);
+        setSnackbarMessage('Kubeconfig shared successfully');
+        setSnackbarSeverity('success');
+        setSnackbarOpen(true);
+        return;
+      }
+      
+      // Handle navigation messages (both formats)
       if (data.redirectPath) {
+        console.log('Navigating to:', data.redirectPath);
         navigate(data.redirectPath);
+        return;
+      }
+      
+      // Handle navigation messages with action format
+      if (data.action === 'navigate' && data.redirectPath) {
+        console.log('Navigating to:', data.redirectPath);
+        navigate(data.redirectPath);
+        return;
       }
     },
-    [headlampUrl, navigate],
+    [iframeURL, navigate],
   );
 
   useEffect(() => {
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [handleMessage]);
+    window.addEventListener('message', handleIframeMessage);
+    return () => window.removeEventListener('message', handleIframeMessage);
+  }, [handleIframeMessage]);
 
-  // Add periodic refresh of kubeconfig
-  useEffect(() => {
-    if (!isStandalone) {
-      const refreshKubeconfigPeriodically = async () => {
-        const authTokenMap = await fetchAuthTokenMap();
-        console.log('Refreshing kubeconfig');
-        await headlampApi.refreshKubeconfig(authTokenMap);
-      };
+  // Fetch auth token map for kubeconfig
+  const fetchAuthTokenMap = useCallback(async () => {
+    const clusters = await kubernetesApi.getClusters();
+    const clusterNames: string[] = [];
+    clusters.forEach((c: any) => {
+      clusterNames.push(
+        `${c.authProvider}${c.oidcTokenProvider ? `.${c.oidcTokenProvider}` : ''}`,
+      );
+    });
 
-      // Initial refresh
-      refreshKubeconfigPeriodically();
-
-      // Set up interval for periodic refresh (every minute)
-      const intervalId = setInterval(refreshKubeconfigPeriodically, 60000);
-
-      // Cleanup interval on component unmount
-      return () => clearInterval(intervalId);
+    const authTokenMap: { [key: string]: string } = {};
+    for (const clusterName of clusterNames) {
+      const auth = await kubernetesAuthProvidersApi.getCredentials(clusterName);
+      if (auth.token) {
+        authTokenMap[clusterName] = auth.token;
+      }
     }
-    return undefined;
-  }, [isStandalone, headlampApi]);
+    return authTokenMap;
+  }, [kubernetesApi, kubernetesAuthProvidersApi]);
 
-  if (!isLoaded) {
-    return <Progress />;
-  }
+  // Send token to iframe
+  const sendToken = useCallback(async () => {
+    setIsTokenSending(true);
+    setTokenAcknowledged(false);
+    try {
+      const { token } = await identityApi.getCredentials();
+      if (!token || !iframeRef.current?.contentWindow) {
+        throw new Error('Token or iframe not available');
+      }
 
-  const queryParams = new URLSearchParams(location.search).toString();
-  const iframeSrc = queryParams ? `${headlampUrl}?${queryParams}` : headlampUrl;
+      const targetOrigin = new URL(iframeURL).origin;
+      iframeRef.current.contentWindow.postMessage(
+        {
+          type: 'BACKSTAGE_AUTH_TOKEN',
+          payload: { token: token },
+        },
+        targetOrigin,
+      );
+
+      console.log('Token sent to Headlamp iframe, waiting for acknowledgment...');
+      // Don't show success snackbar here - wait for acknowledgment
+    } catch (error) {
+      console.error('Token sharing error:', error);
+      setIsTokenSending(false);
+      setSnackbarMessage(`Failed to send token: ${(error as Error).message}`);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
+  }, [identityApi, iframeURL]);
+
+  // Send kubeconfig to iframe
+  const sendKubeconfig = useCallback(async () => {
+    setIsKubeconfigSending(true);
+    setKubeconfigAcknowledged(false);
+    try {
+      const authTokenMap = await fetchAuthTokenMap();
+      const { kubeconfig } = await headlampApi.fetchKubeconfig(authTokenMap);
+      
+      if (!kubeconfig || !iframeRef.current?.contentWindow) {
+        throw new Error('Kubeconfig or iframe not available');
+      }
+
+      const targetOrigin = new URL(iframeURL).origin;
+      iframeRef.current.contentWindow.postMessage(
+        {
+          type: 'BACKSTAGE_KUBECONFIG',
+          payload: { kubeconfig: kubeconfig },
+        },
+        targetOrigin,
+      );
+
+      console.log('Kubeconfig sent to Headlamp iframe, waiting for acknowledgment...');
+      // Don't show success snackbar here - wait for acknowledgment
+    } catch (error) {
+      console.error('Kubeconfig sharing error:', error);
+      setIsKubeconfigSending(false);
+      setSnackbarMessage(`Failed to share kubeconfig: ${(error as Error).message}`);
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
+  }, [fetchAuthTokenMap, headlampApi, iframeURL]);
+
+  // Send both credentials automatically when Headlamp is ready
+  const sendCredentials = useCallback(async () => {
+    if (credentialsSent || isStandalone || !headlampReady) return;
+    
+    console.log('Sending credentials to Headlamp iframe');
+    try {
+      await sendToken();
+      await sendKubeconfig();
+      setCredentialsSent(true);
+    } catch (error) {
+      console.error('Failed to send credentials:', error);
+    }
+  }, [credentialsSent, isStandalone, headlampReady, sendToken, sendKubeconfig]);
+
+  // Initialize iframe URL
+  useEffect(() => {
+    const initializeIframe = async () => {
+      const configuredUrl = config.getOptionalString('headlamp.url');
+      const queryParams = new URLSearchParams(location.search).toString();
+      
+      let baseUrl: string;
+      if (configuredUrl) {
+        baseUrl = configuredUrl;
+        setIsStandalone(true);
+        console.log('Using configured Headlamp URL:', configuredUrl);
+      } else {
+        baseUrl = await headlampApi.getBaseUrl();
+        setIsStandalone(false);
+        console.log('Using Headlamp API URL:', baseUrl);
+      }
+      
+      const finalUrl = baseUrl.endsWith('/') 
+        ? `${baseUrl}?${queryParams}` 
+        : `${baseUrl}/?${queryParams}`;
+      
+      setIframeURL(finalUrl);
+    };
+
+    initializeIframe();
+  }, [config, headlampApi, location.search]);
+
+  // Handle iframe load event
+  useEffect(() => {
+    if (!iframeRef.current || !iframeURL) return undefined;
+
+    const handleIframeLoad = () => {
+      console.log('Headlamp iframe loaded, waiting for HEADLAMP_READY message...');
+      // Reset ready state when iframe reloads
+      setHeadlampReady(false);
+      setCredentialsSent(false);
+      setTokenAcknowledged(false);
+      setKubeconfigAcknowledged(false);
+    };
+
+    const currentIframe = iframeRef.current;
+    currentIframe.addEventListener('load', handleIframeLoad);
+
+    return () => {
+      currentIframe.removeEventListener('load', handleIframeLoad);
+    };
+  }, [iframeURL]);
+
+  // Send credentials when Headlamp becomes ready
+  useEffect(() => {
+    if (headlampReady && !credentialsSent && !isStandalone) {
+      sendCredentials();
+    }
+  }, [headlampReady, credentialsSent, isStandalone, sendCredentials]);
 
   return (
-    <iframe
-      src={iframeSrc}
-      title="Headlamp"
-      style={{
-        width: '100%',
-        height: '100vh',
-        border: 'none',
-      }}
-    />
+    <>
+      {!isStandalone && (
+        <div>
+          {isHeaderVisible && (
+            <Header title="Headlamp" subtitle="Kubernetes Dashboard">
+              <MoreOptions
+                onSendToken={sendToken}
+                onShareKubeconfig={sendKubeconfig}
+                isTokenSending={isTokenSending}
+                isKubeconfigSending={isKubeconfigSending}
+                onClose={() => setPopoverOpen(!popoverOpen)}
+                popoverOpen={popoverOpen}
+              />
+            </Header>
+          )}
+          <IconButton 
+            className={classes.toggleStrip}
+            onClick={() => setIsHeaderVisible(!isHeaderVisible)}
+            aria-label={isHeaderVisible ? "Hide header" : "Show header"}
+          >
+            {isHeaderVisible ? (
+              <KeyboardArrowUpIcon />
+            ) : (
+              <KeyboardArrowDownIcon />
+            )}
+          </IconButton>
+        </div>
+      )}
+
+      <div className={classes.iframeContainer}>
+        {iframeURL && (
+          <iframe
+            ref={iframeRef}
+            src={iframeURL}
+            title="Headlamp"
+            className={classes.iframe}
+          />
+        )}
+      </div>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

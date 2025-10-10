@@ -61,7 +61,7 @@ export const headlampPlugin = createBackendPlugin({
           }),
         );
         httpRouter.addAuthPolicy({
-          path: '/health',
+          path: '/',
           allow: 'unauthenticated',
         });
       },
