@@ -35,7 +35,7 @@ const BINARY_VERSIONS = {
 function downloadPlugins() {
   const plugins = {
     backstage:
-      "https://github.com/headlamp-k8s/plugins/releases/download/backstage-0.1.0-beta-1/headlamp-k8s-backstage-0.1.0-beta-1.tar.gz",
+      "https://github.com/headlamp-k8s/plugins/releases/download/backstage-0.1.0-beta-2/headlamp-k8s-backstage-0.1.0-beta-2.tar.gz",
   };
 
   const pluginsDir = path.join(rootDir, "plugins");
