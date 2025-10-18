@@ -1450,6 +1450,15 @@
     "@backstage/types" "^1.2.1"
     ms "^2.1.3"
 
+"@backstage/config@^1.3.5":
+  version "1.3.5"
+  resolved "https://registry.yarnpkg.com/@backstage/config/-/config-1.3.5.tgz#744fa60e604c59a53b68b3135e1ec4c4a5e44810"
+  integrity sha512-ZVj/3V5RDEhrxuzcTJNiZj3c/CJLG+Xdo9qlTTxHKnDbfHV6PXY6QBY7Zh/KMsIK6OKaYQpWuV+qEwZUAMiiwA==
+  dependencies:
+    "@backstage/errors" "^1.2.7"
+    "@backstage/types" "^1.2.2"
+    ms "^2.1.3"
+
 "@backstage/core-app-api@^1.18.0":
   version "1.18.0"
   resolved "https://registry.yarnpkg.com/@backstage/core-app-api/-/core-app-api-1.18.0.tgz#e2f258dab663bf198ffdf8e8fb4dbf1bc8a2eb00"
@@ -1531,6 +1540,17 @@
     "@backstage/config" "^1.3.3"
     "@backstage/errors" "^1.2.7"
     "@backstage/types" "^1.2.1"
+    "@backstage/version-bridge" "^1.0.11"
+    history "^5.0.0"
+
+"@backstage/core-plugin-api@^1.11.0":
+  version "1.11.1"
+  resolved "https://registry.yarnpkg.com/@backstage/core-plugin-api/-/core-plugin-api-1.11.1.tgz#038a6c238bdb7d2f9f3eb5df14e64395c726bec9"
+  integrity sha512-+U7c24XR01E7ZYjjMBmT+FFAslkk7CmxuHyQ3FUFF3DSR8R9kR5Tmo9KgbGg+LXe2h3v8f03bLJrjFk8OMKnHA==
+  dependencies:
+    "@backstage/config" "^1.3.5"
+    "@backstage/errors" "^1.2.7"
+    "@backstage/types" "^1.2.2"
     "@backstage/version-bridge" "^1.0.11"
     history "^5.0.0"
 
@@ -1707,7 +1727,7 @@
     yaml "^2.0.0"
     zen-observable "^0.10.0"
 
-"@backstage/plugin-kubernetes-common@^0.9.6":
+"@backstage/plugin-kubernetes-common@0.9.6", "@backstage/plugin-kubernetes-common@^0.9.6":
   version "0.9.6"
   resolved "https://registry.yarnpkg.com/@backstage/plugin-kubernetes-common/-/plugin-kubernetes-common-0.9.6.tgz#e6075bdd97fe9e735cde841693b8866018d52121"
   integrity sha512-j6JCF8kjZRNcfGA4V+ziSbX+WYgkUDFUZsFphFwb2hvNOtBWUy7tQPzvUCs1Idg1aDURpNFh1MgW1y5YGVnc0Q==
@@ -1814,6 +1834,11 @@
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/@backstage/types/-/types-1.2.1.tgz#8c15c71e6b629806d3dc00227aaa4fd1c19cef16"
   integrity sha512-0GkrZthoIkUzoeop+8fZZk2MWlLd1q0LB59tMarsjw7ccMtFYR96jhlf1qGvcbw7Gn5ETtJfTC2C1aUzvgvF+w==
+
+"@backstage/types@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@backstage/types/-/types-1.2.2.tgz#280e3dec7be5bcddc54ee0e8a024a2768d274692"
+  integrity sha512-gCctHIL3VSCKiffbWDq4Zl2n7g8NPO/dD2ksdOEm9KzWfb5AubsfQzakoKjZ8XvmdaY9jY7j1yRmHSjAqq7rBA==
 
 "@backstage/version-bridge@^1.0.11":
   version "1.0.11"
