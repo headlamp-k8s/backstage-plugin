@@ -173,7 +173,7 @@ export function HeadlampComponent() {
   // Handle messages from iframe
   const handleIframeMessage = useCallback(
     (event: MessageEvent) => {
-      if (event.origin !== new URL(iframeURL).origin) return;
+      if (iframeURL && event.origin !== new URL(iframeURL).origin) return;
       
       const data = event.data;
       
@@ -224,9 +224,12 @@ export function HeadlampComponent() {
   );
 
   useEffect(() => {
+    // Only add message listener when iframeURL is properly set
+    if (!iframeURL) return;
+    
     window.addEventListener('message', handleIframeMessage);
     return () => window.removeEventListener('message', handleIframeMessage);
-  }, [handleIframeMessage]);
+  }, [handleIframeMessage, iframeURL]);
 
   // Fetch auth token map for kubeconfig
   const fetchAuthTokenMap = useCallback(async () => {
