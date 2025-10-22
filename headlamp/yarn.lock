@@ -1707,7 +1707,7 @@
     yaml "^2.0.0"
     zen-observable "^0.10.0"
 
-"@backstage/plugin-kubernetes-common@^0.9.6":
+"@backstage/plugin-kubernetes-common@0.9.6", "@backstage/plugin-kubernetes-common@^0.9.6":
   version "0.9.6"
   resolved "https://registry.yarnpkg.com/@backstage/plugin-kubernetes-common/-/plugin-kubernetes-common-0.9.6.tgz#e6075bdd97fe9e735cde841693b8866018d52121"
   integrity sha512-j6JCF8kjZRNcfGA4V+ziSbX+WYgkUDFUZsFphFwb2hvNOtBWUy7tQPzvUCs1Idg1aDURpNFh1MgW1y5YGVnc0Q==
@@ -12768,7 +12768,7 @@ react-use@^17.2.4, react-use@^17.3.2:
     ts-easing "^0.2.0"
     tslib "^2.1.0"
 
-react-use@^17.4.0:
+react-use@^17.4.0, react-use@^17.6.0:
   version "17.6.0"
   resolved "https://registry.yarnpkg.com/react-use/-/react-use-17.6.0.tgz#2101a3a79dc965a25866b21f5d6de4b128488a14"
   integrity sha512-OmedEScUMKFfzn1Ir8dBxiLLSOzhKe/dPZwVxcujweSj45aNM7BEGPb9BEVIgVEqEXx6f3/TsXzwIktNgUR02g==
