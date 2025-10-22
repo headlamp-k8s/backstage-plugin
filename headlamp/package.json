@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@backstage/core-components": "^0.17.0",
-    "@backstage/core-plugin-api": "^1.10.9",
+    "@backstage/core-plugin-api": "^1.11.0",
     "@backstage/plugin-kubernetes-react": "0.5.9",
     "@backstage/plugin-kubernetes-common": "0.9.6",
     "@backstage/theme": "^0.6.4",
