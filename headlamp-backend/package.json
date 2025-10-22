@@ -44,7 +44,7 @@
     "@backstage/config": "^1.2.0",
     "@backstage/errors": "^1.2.4",
     "@backstage/plugin-catalog-node": "^1.12.5",
-    "@backstage/plugin-kubernetes-backend": "^0.18.4",
+    "@backstage/plugin-kubernetes-backend": "^0.20.2",
     "@backstage/plugin-kubernetes-common": "^0.8.2",
     "@backstage/plugin-kubernetes-node": "^0.1.17",
     "@backstage/plugin-permission-common": "^0.8.1",
