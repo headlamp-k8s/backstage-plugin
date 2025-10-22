@@ -1707,7 +1707,7 @@
     yaml "^2.0.0"
     zen-observable "^0.10.0"
 
-"@backstage/plugin-kubernetes-common@^0.9.6":
+"@backstage/plugin-kubernetes-common@0.9.6", "@backstage/plugin-kubernetes-common@^0.9.6":
   version "0.9.6"
   resolved "https://registry.yarnpkg.com/@backstage/plugin-kubernetes-common/-/plugin-kubernetes-common-0.9.6.tgz#e6075bdd97fe9e735cde841693b8866018d52121"
   integrity sha512-j6JCF8kjZRNcfGA4V+ziSbX+WYgkUDFUZsFphFwb2hvNOtBWUy7tQPzvUCs1Idg1aDURpNFh1MgW1y5YGVnc0Q==
@@ -1801,10 +1801,19 @@
     i18next "^22.4.15"
     zen-observable "^0.10.0"
 
-"@backstage/theme@^0.6.4", "@backstage/theme@^0.6.7":
+"@backstage/theme@^0.6.7":
   version "0.6.7"
   resolved "https://registry.yarnpkg.com/@backstage/theme/-/theme-0.6.7.tgz#861add4ac04dd9324ee232494ee90e2ce9f2280c"
   integrity sha512-sXtX3btb/bCUZXB1Hduc5VPZZ9dB7X9ikYkVs0nXz9UrQTVg7hvobi+0dV/HxGs5kYGBlu/OpaPAJk5DtJ6SSQ==
+  dependencies:
+    "@emotion/react" "^11.10.5"
+    "@emotion/styled" "^11.10.5"
+    "@mui/material" "^5.12.2"
+
+"@backstage/theme@^0.6.8":
+  version "0.6.8"
+  resolved "https://registry.yarnpkg.com/@backstage/theme/-/theme-0.6.8.tgz#703088101ca20205d77de6a688881e909dd57ae4"
+  integrity sha512-hNUoOjirVIVht6GbDFt6vEej4hA7Kq3trJmyWhKuAKndPD+azjhzMOnGM7Rzj5qIkJeCNB6qcC89+NV6no1HzA==
   dependencies:
     "@emotion/react" "^11.10.5"
     "@emotion/styled" "^11.10.5"
